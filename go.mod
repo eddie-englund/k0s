@@ -283,6 +283,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
 
+replace sigs.k8s.io/controller-runtime => github.com/twz123/controller-runtime v0.17.1-0.20240617150156-3215e73bf48c
+
 // Replacements duplicated from upstream Kubernetes
 replace (
 	// https://github.com/kubernetes/kubernetes/blob/v1.31.0-alpha.1/go.mod#L227-L258
