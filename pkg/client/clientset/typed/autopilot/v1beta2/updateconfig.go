@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+	consistencydetector "k8s.io/client-go/util/consistencydetector"
 )
 
 // UpdateConfigsGetter has a method to return a UpdateConfigInterface.
@@ -72,6 +73,16 @@ func (c *updateConfigs) Get(ctx context.Context, name string, options v1.GetOpti
 
 // List takes label and field selectors, and returns the list of UpdateConfigs that match those selectors.
 func (c *updateConfigs) List(ctx context.Context, opts v1.ListOptions) (result *v1beta2.UpdateConfigList, err error) {
+	defer func() {
+		if err == nil {
+			consistencydetector.CheckListFromCacheDataConsistencyIfRequested(ctx, "list request for updateconfigs", c.list, opts, result)
+		}
+	}()
+	return c.list(ctx, opts)
+}
+
+// list takes label and field selectors, and returns the list of UpdateConfigs that match those selectors.
+func (c *updateConfigs) list(ctx context.Context, opts v1.ListOptions) (result *v1beta2.UpdateConfigList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
