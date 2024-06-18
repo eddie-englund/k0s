@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+	consistencydetector "k8s.io/client-go/util/consistencydetector"
 )
 
 // ChartsGetter has a method to return a ChartInterface.
@@ -75,6 +76,16 @@ func (c *charts) Get(ctx context.Context, name string, options v1.GetOptions) (r
 
 // List takes label and field selectors, and returns the list of Charts that match those selectors.
 func (c *charts) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ChartList, err error) {
+	defer func() {
+		if err == nil {
+			consistencydetector.CheckListFromCacheDataConsistencyIfRequested(ctx, "list request for charts", c.list, opts, result)
+		}
+	}()
+	return c.list(ctx, opts)
+}
+
+// list takes label and field selectors, and returns the list of Charts that match those selectors.
+func (c *charts) list(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ChartList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second

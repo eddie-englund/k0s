@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+	consistencydetector "k8s.io/client-go/util/consistencydetector"
 )
 
 // ClusterConfigsGetter has a method to return a ClusterConfigInterface.
@@ -75,6 +76,16 @@ func (c *clusterConfigs) Get(ctx context.Context, name string, options v1.GetOpt
 
 // List takes label and field selectors, and returns the list of ClusterConfigs that match those selectors.
 func (c *clusterConfigs) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ClusterConfigList, err error) {
+	defer func() {
+		if err == nil {
+			consistencydetector.CheckListFromCacheDataConsistencyIfRequested(ctx, "list request for clusterconfigs", c.list, opts, result)
+		}
+	}()
+	return c.list(ctx, opts)
+}
+
+// list takes label and field selectors, and returns the list of ClusterConfigs that match those selectors.
+func (c *clusterConfigs) list(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ClusterConfigList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second

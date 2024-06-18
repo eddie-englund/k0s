@@ -28,6 +28,7 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+	consistencydetector "k8s.io/client-go/util/consistencydetector"
 )
 
 // EtcdMembersGetter has a method to return a EtcdMemberInterface.
@@ -75,6 +76,16 @@ func (c *etcdMembers) Get(ctx context.Context, name string, options v1.GetOption
 
 // List takes label and field selectors, and returns the list of EtcdMembers that match those selectors.
 func (c *etcdMembers) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.EtcdMemberList, err error) {
+	defer func() {
+		if err == nil {
+			consistencydetector.CheckListFromCacheDataConsistencyIfRequested(ctx, "list request for etcdmembers", c.list, opts, result)
+		}
+	}()
+	return c.list(ctx, opts)
+}
+
+// list takes label and field selectors, and returns the list of EtcdMembers that match those selectors.
+func (c *etcdMembers) list(ctx context.Context, opts v1.ListOptions) (result *v1beta1.EtcdMemberList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
